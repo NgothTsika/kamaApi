@@ -1,0 +1,19 @@
+{
+  "buildCommand": "cd server && yarn build",
+  "outputDirectory": "server/dist",
+  "rootDirectory": "server",
+  "env": [
+    "DATABASE_URL",
+    "DIRECT_URL",
+    "NODE_ENV",
+    "PORT",
+    "CORS_ORIGIN",
+    "SUPABASE_URL",
+    "SUPABASE_ANON_KEY",
+    "SUPABASE_SERVICE_ROLE_KEY",
+    "JWT_SECRET",
+    "GOOGLE_CLIENT_ID",
+    "GOOGLE_CLIENT_SECRET",
+    "SESSION_TTL_DAYS"
+  ]
+}

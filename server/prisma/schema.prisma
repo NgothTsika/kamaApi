@@ -1,0 +1,1023 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ---------- Users & Authentication ----------
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  username     String   @unique
+  avatar       String?
+  passwordHash String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  role         UserRole @default(USER)
+
+  xp         Int       @default(0)
+  streak     Int       @default(0)
+  lastActive DateTime?
+
+  language       String?
+  offlineEnabled Boolean @default(false)
+
+  // Email verification
+  emailVerified Boolean @default(false)
+
+  // Relations
+  completedLessons    CompletedLesson[]
+  quizSessions        QuizSession[]
+  collectedCharacters CollectedCharacter[]
+  userSubmissions     ContentSubmission[]
+  contentReports      ContentReport[]      @relation("reporter") // user is reporter
+  resolvedReports     ContentReport[]      @relation("resolver") // user as resolver
+  offlineContent      OfflineContent[]
+  collections         Collection[]
+  userAchievements    UserAchievement[]
+  pushTokens          PushToken[]
+  gameMatchesPlayer1  GameMatch[]          @relation("player1")
+  gameMatchesPlayer2  GameMatch[]          @relation("player2")
+  gameMatchesWinner   GameMatch[]          @relation("winner")
+  userProgress        UserProgress[]
+  readingGoal         ReadingGoal?
+  dailyActivities     DailyActivity[]
+  lessonFeedback      LessonFeedback[]
+  
+  // New relations
+  sessions          Session[]
+  leaderboard       Leaderboard?
+  notifications     Notification[]
+  searchHistory     SearchHistory[]
+  userAnalytics     UserAnalytics?
+  comments          Comment[]
+  auditLogs         AuditLog[]            @relation("adminLogs")
+  // ...existing code...
+  followers         UserFollow[]          @relation("following")
+  following         UserFollow[]          @relation("follower")
+  bookmarks         Bookmark[]
+  pollVotes         PollVote[]            // User's votes on poll questions
+  
+  // Hearts and recovery
+  hearts            UserHearts?
+  heartRecoveryEvents HeartRecoveryEvent[]
+  
+  // Streaks (detailed tracking via UserStreak model)
+  userStreak        UserStreak?
+  streakCheckIns    StreakCheckIn[]
+  
+  // Character progression
+  characterProgress UserCharacterProgress[]
+  
+  // Daily challenges
+  challengeProgress UserChallengeProgress[]
+}
+
+enum UserRole {
+  USER
+  MODERATOR
+  ADMIN
+}
+
+// ---------- Content Models ----------
+model Category {
+  id           String   @id @default(cuid())
+  name         String   @unique
+  coverImage   String?
+  slug         String   @unique
+  description  String?
+  icon         String?
+  order        Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  lessons            Lesson[]
+  characterCategories CharacterCategory[]
+  submissions        ContentSubmission[]
+}
+
+// Junction table for many-to-many relationship between Character and Category
+model CharacterCategory {
+  id          String   @id @default(cuid())
+  characterId String
+  categoryId  String
+  createdAt   DateTime @default(now())
+
+  character Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
+  category  Category  @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@unique([characterId, categoryId])
+  @@index([characterId])
+  @@index([categoryId])
+}
+
+// Junction table for many-to-many relationship between Lesson and Character
+model LessonCharacter {
+  id          String   @id @default(cuid())
+  lessonId    String
+  characterId String
+  createdAt   DateTime @default(now())
+
+  lesson    Lesson    @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  character Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
+
+  @@unique([lessonId, characterId])
+  @@index([lessonId])
+  @@index([characterId])
+}
+
+model Lesson {
+  id          String   @id @default(cuid())
+  title       String
+  coverImage  String?
+  slug        String   @unique
+  description String?
+  content     String // HTML or markdown
+  hook        String?
+  xpReward    Int      @default(10)
+  isPremium   Boolean  @default(false)
+  order       Int      @default(0)
+  published   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  categoryId String?
+  category   Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
+  topicId String?
+  topic   Topic?  @relation(fields: [topicId], references: [id], onDelete: SetNull)
+
+  deepDiveContent String?
+
+  // Audio support
+  titleAudioUrl       String?  // Audio for lesson title
+  hookAudioUrl        String?  // Audio for the intro/hook
+  contentAudioUrl     String?  // Audio narration for main content
+  deepDiveAudioUrl    String?  // Audio for deep dive content
+
+  // Self‑relations (many-to-many via junction tables)
+  prerequisites   LessonPrerequisite[] @relation("LessonPrerequisites_lesson")
+  prerequisiteFor LessonPrerequisite[] @relation("LessonPrerequisites_prerequisite")
+  followUps       LessonFollowUp[]     @relation("LessonFollowUps_lesson")
+  followUpFor     LessonFollowUp[]     @relation("LessonFollowUps_followUp")
+
+  chapters         Chapter[]
+  quizzes          Quiz[]
+  translations     LessonTranslation[]
+  completedBy      CompletedLesson[]
+  reports          ContentReport[]
+  offlineContent   OfflineContent[]
+  collectionItems  CollectionItem[]
+  unlocksCharacter Character?
+  relatedCharacters LessonCharacter[]
+  userProgress     UserProgress[]
+  lessonFeedback   LessonFeedback[]
+  comments         Comment[]
+  bookmarks        Bookmark[]
+}
+
+model Chapter {
+  id               String   @id @default(cuid())
+  lessonId         String
+  lesson           Lesson   @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  title            String
+  coverImage       String?
+  content          String
+  mediaType        String? // "image", "video", "none"
+  mediaUrl         String?
+  feedbackQuestion String?
+  order            Int      @default(0)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  userProgress UserProgress[]
+}
+
+// Many‑to‑many self‑relation junction tables (explicit)
+model LessonPrerequisite {
+  lessonId       String
+  prerequisiteId String
+
+  lesson       Lesson @relation("LessonPrerequisites_lesson", fields: [lessonId], references: [id], onDelete: Cascade)
+  prerequisite Lesson @relation("LessonPrerequisites_prerequisite", fields: [prerequisiteId], references: [id], onDelete: Cascade)
+
+  @@id([lessonId, prerequisiteId])
+}
+
+model LessonFollowUp {
+  lessonId   String
+  followUpId String
+
+  lesson   Lesson @relation("LessonFollowUps_lesson", fields: [lessonId], references: [id], onDelete: Cascade)
+  followUp Lesson @relation("LessonFollowUps_followUp", fields: [followUpId], references: [id], onDelete: Cascade)
+
+  @@id([lessonId, followUpId])
+}
+
+model LessonTranslation {
+  id              String   @id @default(cuid())
+  language        String
+  title           String
+  description     String?
+  content         String
+  hook            String?
+  deepDiveContent String?
+  createdAt       DateTime @default(now())
+
+  lessonId String
+  lesson   Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+}
+
+model Quiz {
+  id               String   @id @default(cuid())
+  lessonId         String
+  lesson           Lesson   @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  question         String
+  type             String   @default("multiple_choice") // "true_false", "multiple_choice", "image_choice", "poll"
+  options          Json     // array of strings for text options
+  optionImages     Json?    // array of image URLs for image_choice type
+  correctOption    Int?     // index of correct answer (null for polls since they don't have right/wrong)
+  explanation      String?
+  order            Int      @default(0)
+  heartLimit       Int      @default(4)
+  timeLimitSeconds Int?
+  difficulty       String?  // "easy", "medium", "hard"
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  isActive Boolean  @default(true) // Enable/disable quizzes
+  tags     String[] // For filtering
+
+  topicId String?
+  topic   Topic?  @relation(fields: [topicId], references: [id], onDelete: SetNull)
+
+  // Audio support
+  questionAudioUrl String?  // Audio narration for the question
+
+  // Poll-specific fields
+  isPoll          Boolean  @default(false) // Mark as poll question (no scoring, just collection)
+  pollDescription String?  // Optional context for poll question (e.g., "What do you think about...")
+  pollResults     Json?    // Stores vote counts per option: { "0": 15, "1": 42, "2": 8, "3": 5 }
+  totalPollVotes  Int      @default(0) // Total number of votes cast
+
+  sessions        QuizSession[]
+  gameRounds      GameRound[]
+  attempts        QuizAttempt[]
+  translations    QuizTranslation[]
+  pollVotes       PollVote[] // New relation for poll voting
+}
+
+model QuizTranslation {
+  id              String   @id @default(cuid())
+  quizId          String
+  quiz            Quiz     @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  language        String
+  question        String
+  options         Json
+  explanation     String?
+  pollDescription String?  // Translation for poll context/description
+  createdAt       DateTime @default(now())
+
+  @@unique([quizId, language])
+}
+
+model QuizSession {
+  id              String    @id @default(cuid())
+  userId          String
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  quizId          String
+  quiz            Quiz      @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  heartsRemaining Int
+  startedAt       DateTime  @default(now())
+  completedAt     DateTime?
+  passed          Boolean?
+
+  attempts QuizAttempt[]
+}
+
+model QuizAttempt {
+  id             String      @id @default(cuid())
+  sessionId      String
+  session        QuizSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  questionId     String
+  quiz           Quiz        @relation(fields: [questionId], references: [id])
+  selectedOption Int
+  isCorrect      Boolean
+  heartLost      Boolean     @default(false)
+  createdAt      DateTime    @default(now())
+}
+
+// Poll voting - for collecting user feedback without scoring
+model PollVote {
+  id             String   @id @default(cuid())
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  quizId         String   // Poll question ID
+  quiz           Quiz     @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  selectedOption Int      // Index of the selected poll option
+  votedAt        DateTime @default(now())
+
+  @@unique([userId, quizId]) // One vote per user per poll
+}
+
+model Character {
+  id             String   @id @default(cuid())
+  name           String
+  slug           String   @unique
+  description    String
+  imageUrl       String?
+  story          String?
+  xpThreshold    Int?
+  rarityLevel    String? // "common", "rare", "legendary"
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  // Hierarchical type system
+  // Level 1: Entity Type (main category)
+  entityType     String   @default("person") // "person" | "place" | "event" | "tradition" | "concept"
+  
+  // Level 2: Specific Type (varies by entity type)
+  personType     String?   // "inventor" | "doctor" | "singer" | "artist" | "scientist" | "philosopher" | "athlete" | "activist" | "leader" | custom
+  placeType      String?   // "city" | "country" | "region" | "monument" | "institution" | custom
+  eventType      String?   // "war" | "revolution" | "discovery" | "cultural_event" | "natural_disaster" | custom
+  traditionType  String?   // "holiday" | "ritual" | "art_form" | "belief_system" | "festival" | custom
+  conceptType    String?   // "movement" | "philosophy" | "technology" | "culture" | custom
+  
+  // Type-specific fields (flexible metadata)
+  metadata       Json?    // Stores type-specific data like:
+                          // { personType: {...}, placeType: {...}, etc. }
+  
+  // Common temporal fields
+  birthYear      Int?     // Birth year (for people, events, traditions)
+  endYear        Int?     // End/death year (for events, traditions, concepts)
+  country        String?  // Associated country/location
+  achievements   Json?    // Array of achievement strings
+  
+  // Legacy fields (kept for backwards compatibility)
+  inventionImage String?
+
+  // Many-to-many relationship with categories
+  categories CharacterCategory[]
+  relatedLessons LessonCharacter[]
+  
+  // Character unlock/progression
+  unlockConditions CharacterUnlock[]
+  userProgress     UserCharacterProgress[]
+
+  unlockLessonId String? @unique
+  unlockLesson   Lesson? @relation(fields: [unlockLessonId], references: [id], onDelete: SetNull)
+
+  translations CharacterTranslation[]
+  collectedBy  CollectedCharacter[]
+  
+  @@index([entityType])
+  @@index([personType])
+  @@index([placeType])
+  @@index([eventType])
+  @@index([traditionType])
+  @@index([conceptType])
+  @@index([country])
+}
+
+model CharacterTranslation {
+  id          String   @id @default(cuid())
+  language    String
+  name        String
+  description String
+  story       String?
+  createdAt   DateTime @default(now())
+
+  characterId String
+  character   Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
+
+  @@unique([characterId, language])
+}
+
+model CompletedLesson {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lessonId    String
+  lesson      Lesson   @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  completedAt DateTime @default(now())
+  xpEarned    Int
+
+  @@unique([userId, lessonId])
+}
+
+model CollectedCharacter {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  characterId String
+  character   Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
+  collectedAt DateTime  @default(now())
+
+  // Character card details
+  characterCard CharacterCard?
+
+  @@unique([userId, characterId])
+}
+
+// ---------- Character Cards (Unlocked after completing lesson & quiz) ----------
+model CharacterCard {
+  id                   String             @id @default(cuid())
+  collectedCharacterId String             @unique
+  collectedCharacter   CollectedCharacter @relation(fields: [collectedCharacterId], references: [id], onDelete: Cascade)
+
+  // Inventor/Character Information
+  inventorName         String
+  inventionName        String
+  inventionDescription String?
+  inventionImage       String? // Image of the invention
+  characterImage       String? // Image of the character (can be same as Character.imageUrl)
+
+  // Additional card details
+  year         String?
+  country      String?
+  achievements Json? // JSON array of achievements
+  impact       Json? // Structured impact information
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ---------- Community & Missing Features ----------
+model ContentSubmission {
+  id             String           @id @default(cuid())
+  userId         String
+  user           User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  categoryId     String
+  category       Category         @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  title          String
+  description    String
+  content        String?
+  imageUrl       String?
+  sources        String?
+  status         SubmissionStatus @default(PENDING)
+  moderatorNotes String?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  reports ContentReport[]
+}
+
+enum SubmissionStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model OfflineContent {
+  id       String   @id @default(cuid())
+  userId   String
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lessonId String
+  lesson   Lesson   @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  syncedAt DateTime @default(now())
+  lastSync DateTime @updatedAt
+
+  @@unique([userId, lessonId])
+}
+
+model ContentReport {
+  id           String             @id @default(cuid())
+  reporterId   String
+  reporter     User               @relation("reporter", fields: [reporterId], references: [id], onDelete: Cascade)
+  lessonId     String?
+  lesson       Lesson?            @relation(fields: [lessonId], references: [id], onDelete: SetNull)
+  submissionId String?
+  submission   ContentSubmission? @relation(fields: [submissionId], references: [id], onDelete: SetNull)
+  reason       String
+  description  String?
+  status       ReportStatus       @default(OPEN)
+  createdAt    DateTime           @default(now())
+  resolvedAt   DateTime?
+  resolverId   String?
+  resolver     User?              @relation("resolver", fields: [resolverId], references: [id], onDelete: SetNull)
+}
+
+enum ReportStatus {
+  OPEN
+  IN_REVIEW
+  RESOLVED
+  DISMISSED
+}
+
+// ---------- Additional Missing Features ----------
+model Collection {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title       String
+  description String?
+  isPublic    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  items CollectionItem[]
+}
+
+model CollectionItem {
+  id           String     @id @default(cuid())
+  collectionId String
+  collection   Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  lessonId     String
+  lesson       Lesson     @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  order        Int        @default(0)
+  addedAt      DateTime   @default(now())
+
+  @@unique([collectionId, lessonId])
+}
+
+model Achievement {
+  id             String   @id @default(cuid())
+  name           String
+  description    String
+  icon           String?
+  xpRequired     Int?
+  streakRequired Int?
+  createdAt      DateTime @default(now())
+
+  userAchievements UserAchievement[]
+}
+
+model UserAchievement {
+  id            String      @id @default(cuid())
+  userId        String
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  achievementId String
+  achievement   Achievement @relation(fields: [achievementId], references: [id], onDelete: Cascade)
+  earnedAt      DateTime    @default(now())
+
+  @@unique([userId, achievementId])
+}
+
+// ---------- Special Events (Temporary Multipliers) ----------
+model GameEvent {
+  id              String   @id @default(cuid())
+  eventName       String   @unique
+  description     String?
+  multiplier      Float // e.g., 2.0 for 2x, 1.5 for 1.5x
+  durationHours   Int // How long the event lasts
+  affectedSystem  String // "hearts", "xp", or "all"
+  isActive        Boolean  @default(true)
+  
+  startsAt        DateTime @default(now())
+  endsAt          DateTime // Calculated as startsAt + (durationHours * 60 * 60 * 1000)ms
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([isActive])
+  @@index([endsAt])
+}
+
+// ---------- Feedback & Rating System ----------
+model LessonFeedback {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lessonId  String
+  lesson    Lesson   @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  rating    Int // 1-5 stars
+  comment   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, lessonId])
+}
+
+// ---------- Topics & Subcategories (for 1v1 games) ----------
+model Topic {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  slug        String   @unique
+  description String?
+  coverImage  String?
+  parentId    String?
+  parent      Topic?   @relation("TopicSubcategories", fields: [parentId], references: [id], onDelete: SetNull)
+  children    Topic[]  @relation("TopicSubcategories")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  quizzes     Quiz[]
+  gameMatches GameMatch[]
+  lessons     Lesson[]
+}
+
+// ---------- 1v1 Games ----------
+model GameMatch {
+  id            String      @id @default(cuid())
+  player1Id     String
+  player1       User        @relation("player1", fields: [player1Id], references: [id], onDelete: Cascade)
+  player2Id     String?
+  player2       User?       @relation("player2", fields: [player2Id], references: [id], onDelete: Cascade)
+  winnerId      String?
+  winner        User?       @relation("winner", fields: [winnerId], references: [id], onDelete: SetNull)
+  heartsPlayer1 Int         @default(3)
+  heartsPlayer2 Int         @default(3)
+  status        MatchStatus @default(WAITING)
+  startedAt     DateTime    @default(now())
+  endedAt       DateTime?
+  topicId       String?
+  topic         Topic?      @relation(fields: [topicId], references: [id], onDelete: SetNull)
+  quizPool      Json?
+
+  playerCount Int @default(2) // For future 3+ player games
+  maxRounds   Int @default(5) // Customize game length
+
+  rounds GameRound[]
+}
+
+enum MatchStatus {
+  WAITING
+  IN_PROGRESS
+  FINISHED
+  CANCELLED
+}
+
+model GameRound {
+  id               String    @id @default(cuid())
+  matchId          String
+  match            GameMatch @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  questionId       String
+  question         Quiz      @relation(fields: [questionId], references: [id])
+  player1Answer    Int?
+  player2Answer    Int?
+  player1Correct   Boolean?
+  player2Correct   Boolean?
+  player1HeartLost Boolean?
+  player2HeartLost Boolean?
+  order            Int
+  createdAt        DateTime  @default(now())
+}
+
+// ---------- User Progress (Resume) ----------
+model UserProgress {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lessonId  String
+  lesson    Lesson   @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  chapterId String
+  chapter   Chapter  @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+  position  Int? // optional scroll position
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, lessonId])
+}
+
+// ---------- Reading Goals & Activity ----------
+model ReadingGoal {
+  id           String   @id @default(cuid())
+  userId       String   @unique
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  dailyMinutes Int      @default(5)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model DailyActivity {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date        DateTime @default(now()) @db.Date
+  minutesRead Int      @default(0)
+  goalMet     Boolean?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([userId, date])
+}
+
+// ---------- Push Notifications ----------
+model PushToken {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token     String   @unique
+  platform  String // "ios", "android"
+  createdAt DateTime @default(now())
+}
+
+// ---------- Session Management ----------
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  lastUsedAt DateTime?
+
+  @@index([userId])
+}
+
+// ---------- Leaderboards/Rankings ----------
+model Leaderboard {
+  id                String   @id @default(cuid())
+  userId            String   @unique
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  totalXp           Int      @default(0)
+  rank              Int?
+  streakRecord      Int      @default(0)
+  lessonsCompleted  Int      @default(0)
+  charactersCollected Int    @default(0)
+  gamesWon          Int      @default(0)
+  updatedAt         DateTime @updatedAt
+
+  @@index([totalXp])
+}
+
+// ---------- Notifications ----------
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String // "achievement", "gameInvite", "lessonUnlocked", "characterUnlocked", "milestone"
+  title     String
+  message   String
+  data      Json?    // Additional metadata
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([userId, read])
+}
+
+// ---------- Search History ----------
+model SearchHistory {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  query     String
+  results   Int      // Number of results returned
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+}
+
+// ---------- User Analytics ----------
+model UserAnalytics {
+  id                   String   @id @default(cuid())
+  userId               String   @unique
+  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lessonsStarted       Int      @default(0)
+  lessonsCompleted     Int      @default(0)
+  averageCompletionTime Int?    // in minutes
+  favoriteCategory     String?
+  lastActiveAt         DateTime?
+  updatedAt            DateTime @updatedAt
+}
+
+// ---------- Comments/Discussion ----------
+model Comment {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lessonId  String
+  lesson    Lesson   @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  content   String
+  likes     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([lessonId, createdAt])
+}
+
+// ---------- Admin Audit Logs ----------
+model AuditLog {
+  id        String   @id @default(cuid())
+  adminId   String
+  admin     User     @relation("adminLogs", fields: [adminId], references: [id], onDelete: Cascade)
+  action    String   // "delete_lesson", "ban_user", "approve_submission", "reject_submission"
+  entityType String  // "lesson", "user", "submission", "comment"
+  entityId  String
+  changes   Json?    // What changed
+  createdAt DateTime @default(now())
+
+  @@index([adminId, createdAt])
+}
+
+// ---------- Social Features - Follow System ----------
+model UserFollow {
+  id          String   @id @default(cuid())
+  followerId  String
+  follower    User     @relation("follower", fields: [followerId], references: [id], onDelete: Cascade)
+  followingId String
+  following   User     @relation("following", fields: [followingId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+
+  @@unique([followerId, followingId])
+}
+
+// ---------- Bookmarks/Favorites ----------
+model Bookmark {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lessonId  String
+  lesson    Lesson   @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, lessonId])
+}
+
+// ---------- Hearts & Recovery System ----------
+// Gamification mechanic inspired by Duolingo/Paladin
+model UserHearts {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Current heart state
+  hearts          Int      @default(5)     // Max hearts (1-5 typically)
+  maxHearts       Int      @default(5)
+  
+  // Recovery timing
+  lastHeartLossAt DateTime?              // When the last heart was lost
+  lastRecoveredAt DateTime?              // When the last heart was recovered
+  recoveryTimeMs  Int      @default(3600000) // 1 hour in milliseconds (configurable per tier)
+  
+  // Premium benefits
+  premiumUntil    DateTime?              // Premium access grants extra hearts/faster recovery
+  
+  // Statistics
+  totalHeartLosses Int      @default(0)   // Lifetime stat tracking
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([userId])
+  @@index([lastHeartLossAt])
+}
+
+// Track heart recovery events for analytics
+model HeartRecoveryEvent {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  heartsRecovered Int
+  fromHearts      Int      // How many hearts they had before recovery
+  toHearts        Int      // How many after recovery
+  recoveryType    String   // "automatic", "premium_boost", "achievement_reward"
+  
+  createdAt DateTime @default(now())
+  
+  @@index([userId, createdAt])
+}
+
+// ---------- Streak System ----------
+// Track daily active streaks (inspired by Duolingo)
+model UserStreak {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Current streak
+  currentStreak   Int      @default(0)      // Days in current streak
+  longestStreak   Int      @default(0)      // Best streak achieved
+  
+  // Streak tracking
+  lastActivityAt  DateTime?                // Last time user did an activity
+  streakStartedAt DateTime?                // When current streak started
+  
+  // Lost streak tracking
+  streakFrozenUntil DateTime?              // Premium feature: freeze streak for 24h
+  freezesRemaining Int      @default(0)     // Number of streak freezes remaining
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([userId])
+  @@index([lastActivityAt])
+}
+
+// Track daily active check-ins for streaks
+model StreakCheckIn {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  date      DateTime // Date of check-in (normalized to start of day)
+  xpEarned  Int      // XP earned that day
+  lessonCount Int     // Number of lessons completed
+  quizCount Int       // Number of quizzes completed
+  
+  createdAt DateTime @default(now())
+  
+  @@unique([userId, date])
+  @@index([userId, date])
+}
+
+// ---------- Character Unlock System ----------
+// Lock/unlock characters based on lesson progress
+model CharacterUnlock {
+  id          String   @id @default(cuid())
+  characterId String
+  character   Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
+  
+  unlockType  String   // "lesson_completion", "xp_threshold", "achievement", "purchase"
+  lessonId    String?  // If unlocked by completing a lesson
+  xpRequired  Int?     // If unlocked by reaching XP threshold
+  xpCost      Int?     // XP cost to unlock (for purchase type)
+  
+  description String?  // Description of unlock condition
+  order       Int      @default(0)
+  
+  createdAt   DateTime @default(now())
+  
+  @@index([characterId])
+  @@index([unlockType])
+}
+
+// Track which characters user has unlocked
+model UserCharacterProgress {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  characterId   String
+  character     Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
+  
+  unlockedAt    DateTime?
+  isCollected   Boolean  @default(false)  // Added to their collection
+  favoriteLevel Int      @default(0)      // 0-3 hearts showing favorite
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  @@unique([userId, characterId])
+  @@index([userId, unlockedAt])
+}
+
+// ---------- Daily Rewards & Challenges ----------
+// Daily challenges to encourage engagement
+model DailyChallenge {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  
+  challengeType String   // "lessons_completed", "quizzes_passed", "streak_maintained", "hearts_full"
+  targetCount Int       // How many to complete
+  xpReward    Int       // XP given for completion
+  
+  active      Boolean  @default(true)
+  startDate   DateTime @default(now())
+  endDate     DateTime?
+  
+  // Track user progress on this challenge
+  userProgress UserChallengeProgress[]
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@index([active, startDate])
+}
+
+// Track user progress on daily challenges
+model UserChallengeProgress {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  challengeId String
+  challenge   DailyChallenge @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+  
+  progress    Int      @default(0)  // Current progress toward target
+  completed   Boolean  @default(false)
+  completedAt DateTime?
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@unique([userId, challengeId])
+  @@index([userId, completed])
+}
+
+// Gamification system configuration
+model GameConfig {
+  id String @id @default("gamification") // Single row to store all config
+  
+  // Hearts configuration
+  heartsMaxHearts              Int    @default(5)
+  heartsRecoveryTimeMs         Int    @default(3600000) // 1 hour
+  heartsPremiumRecoveryTimeMs  Int    @default(1800000) // 30 minutes
+  
+  // Streaks configuration
+  streaksCheckInHours          Int    @default(24)
+  streaksXpMultiplierFormula   String @default("1 + (currentStreak / 100)")
+  streaksMilestones            Int[]  @default([7, 14, 30, 60, 100, 365])
+  
+  // Characters configuration
+  charactersUnlockXpThreshold  Int    @default(100)
+  charactersPurchaseXpCost     Int    @default(50)
+  
+  // Gamification settings
+  gamificationEnabled          Boolean @default(true)
+  gamificationEventMultiplier  Float   @default(1.0)
+  
+  createdAt                    DateTime @default(now())
+  updatedAt                    DateTime @updatedAt
+}
