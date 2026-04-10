@@ -13,6 +13,7 @@ import {
 
 const authPayloadSchema = z.object({
   idToken: z.string().min(1),
+  accessToken: z.string().min(1).optional(),
   language: z.string().min(2).max(10).optional(),
 });
 

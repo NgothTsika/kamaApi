@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { z } from "zod";
+import { hash } from "bcryptjs";
 import { prisma } from "../../lib/prisma";
 import { asyncHandler } from "../../lib/http";
 import { requireAuth } from "../../middleware/auth.middleware";
@@ -96,6 +97,56 @@ usersRouter.get(
     });
 
     res.status(200).json({ users });
+  }),
+);
+
+usersRouter.post(
+  "/admin",
+  requireAuth,
+  requireRole("ADMIN"),
+  asyncHandler(async (req, res) => {
+    const bodySchema = z.object({
+      email: z.string().email(),
+      password: z.string().min(8),
+      role: z.enum(["ADMIN", "MODERATOR"]).default("ADMIN"),
+      username: z.string().min(3).optional(),
+      name: z.string().optional(),
+    });
+
+    const body = bodySchema.parse(req.body);
+
+    // Check if user already exists
+    const existingUser = await prisma.user.findUnique({
+      where: { email: body.email },
+    });
+
+    if (existingUser) {
+      throw new HttpError(409, "User with this email already exists");
+    }
+
+    // Hash password
+    const hashedPassword = await hash(body.password, 10);
+
+    // Create new admin user
+    const newUser = await prisma.user.create({
+      data: {
+        email: body.email,
+        passwordHash: hashedPassword,
+        username: body.username || body.email.split("@")[0],
+        role: body.role,
+      },
+      select: {
+        id: true,
+        email: true,
+        username: true,
+        role: true,
+        xp: true,
+        streak: true,
+        createdAt: true,
+      },
+    });
+
+    res.status(201).json({ user: newUser });
   }),
 );
 

@@ -829,7 +829,7 @@ contentAdminRouter.post(
   }),
 );
 
-// GET /api/v1/content/admin/lessons/:lessonId/quizzes
+// GET /content/admin/lessons/:lessonId/quizzes
 // Get all quizzes for a specific lesson (admin)
 contentAdminRouter.get(
   "/admin/lessons/:lessonId/quizzes",

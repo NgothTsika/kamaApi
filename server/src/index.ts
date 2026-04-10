@@ -43,54 +43,16 @@ const limiter = rateLimit({
 });
 app.use(limiter);
 
-// CORS Configuration - Enable cross-origin requests from multiple sources
-// Supports: localhost, deployed URL, and any local machine IP (for mobile devices)
-const corsOptions = {
-  origin: (
-    origin: string | undefined,
-    callback: (err: Error | null, allow?: boolean) => void,
-  ) => {
-    // Allowed origins
-    const allowedOrigins = [
-      // Localhost variants
-      "http://localhost:3000",
-      "http://localhost:4000",
-      "http://127.0.0.1:3000",
-      "http://127.0.0.1:4000",
-      "http://10.0.2.2:3000", // Android emulator
-      "http://10.0.2.2:4000",
-      // Deployed URL
-      "https://kamapro-one.vercel.app",
-      // Wildcard for other local IPs (192.168.x.x, 10.x.x.x ranges)
-      // Mobile devices on the same network
-    ];
-
-    // If no origin (same-origin requests, or mobile app without origin header)
-    if (!origin) {
-      return callback(null, true);
-    }
-
-    // Check if origin is in allowed list
-    if (allowedOrigins.includes(origin)) {
-      return callback(null, true);
-    }
-
-    // Allow any local network IP (for mobile devices on home network)
-    // Matches patterns: http://192.168.x.x:*, http://10.x.x.x:*, http://172.16.x.x:*
-    if (/^http:\/\/(192\.168\.|10\.|172\.16\.)[\d.]+:\d+$/.test(origin)) {
-      return callback(null, true);
-    }
-
-    // Deny if not in allowed list
-    callback(new Error("CORS not allowed"));
-  },
-  credentials: true,
-  methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization"],
-  maxAge: 86400, // 24 hours
-};
-
-app.use(cors(corsOptions));
+// CORS Configuration - Enable cross-origin requests
+app.use(
+  cors({
+    origin: env.CORS_ORIGIN === "*" ? true : env.CORS_ORIGIN,
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+    maxAge: 86400, // 24 hours
+  }),
+);
 
 // Body Parser Middleware - Parse incoming request bodies
 // Note: Multer handles multipart/form-data, so we only parse JSON and URL-encoded
@@ -112,14 +74,6 @@ app.get("/health", async (_req, res) => {
       environment: env.NODE_ENV,
       database: "connected",
       version: "1.0.0",
-      cors: "enabled",
-      acceptedOrigins: [
-        "localhost:3000/4000",
-        "127.0.0.1:3000/4000",
-        "10.0.2.2:3000/4000",
-        "192.168.x.x (local network)",
-        "kamapro-one.vercel.app",
-      ],
     });
   } catch (error) {
     res.status(503).json({
@@ -140,7 +94,7 @@ app.get("/ready", (_req, res) => {
 });
 
 // API Routes
-app.use("/api/v1", apiRouter);
+app.use("/", apiRouter);
 
 // 404 Handler
 app.use(notFoundHandler);
@@ -233,7 +187,7 @@ async function initializeServer() {
       `║ • Ready:   http://localhost:${PORT}/ready${" ".repeat(6 + (3000 - PORT).toString().length)}║`,
     );
     console.log(
-      `║ • API:     http://localhost:${PORT}/api/v1${" ".repeat(3 + (3000 - PORT).toString().length)}║`,
+      `║ • API:     http://localhost:${PORT}${" ".repeat(13 + (3000 - PORT).toString().length)}║`,
     );
     console.log("╠════════════════════════════════════════╣");
     console.log("║ Middleware:                            ║");

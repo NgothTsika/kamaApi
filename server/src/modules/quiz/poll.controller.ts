@@ -10,7 +10,7 @@ export const pollRouter = Router();
 
 // ---------- User Poll Voting ----------
 
-// POST /api/v1/content/quizzes/:quizId/poll-vote
+// POST /content/quizzes/:quizId/poll-vote
 // Submit or update a user's vote on a poll question
 pollRouter.post(
   "/quizzes/:quizId/poll-vote",
@@ -103,7 +103,7 @@ pollRouter.post(
   }),
 );
 
-// GET /api/v1/content/quizzes/:quizId/poll-results
+// GET /content/quizzes/:quizId/poll-results
 // Get poll results including user's vote if authenticated
 pollRouter.get(
   "/quizzes/:quizId/poll-results",
@@ -152,7 +152,7 @@ pollRouter.get(
 
 // ---------- Admin Poll Management ----------
 
-// GET /api/v1/content/admin/quizzes/:quizId/analytics
+// GET /content/admin/quizzes/:quizId/analytics
 // Get detailed poll analytics for admin
 const adminRoles = requireRole("ADMIN", "MODERATOR");
 
@@ -202,7 +202,7 @@ pollRouter.get(
   }),
 );
 
-// DELETE /api/v1/content/admin/quizzes/:quizId/poll-votes
+// DELETE /content/admin/quizzes/:quizId/poll-votes
 // Reset/clear all poll votes for a quiz (admin only)
 pollRouter.delete(
   "/admin/quizzes/:quizId/poll-votes",

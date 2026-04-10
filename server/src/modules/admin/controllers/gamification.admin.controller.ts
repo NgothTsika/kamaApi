@@ -23,7 +23,7 @@ const requireAdmin = asyncHandler(async (req, res, next) => {
 // ============================================================================
 
 /**
- * GET /api/v1/admin/gamification/hearts
+ * GET /admin/gamification/hearts
  */
 gamificationAdminRouter.get(
   "/hearts",
@@ -51,7 +51,7 @@ gamificationAdminRouter.get(
 );
 
 /**
- * GET /api/v1/admin/gamification/hearts/stats
+ * GET /admin/gamification/hearts/stats
  */
 gamificationAdminRouter.get(
   "/hearts/stats",
@@ -64,7 +64,7 @@ gamificationAdminRouter.get(
 );
 
 /**
- * GET /api/v1/admin/gamification/hearts/recovery-history
+ * GET /admin/gamification/hearts/recovery-history
  */
 gamificationAdminRouter.get(
   "/hearts/recovery-history",
@@ -88,7 +88,7 @@ gamificationAdminRouter.get(
 );
 
 /**
- * POST /api/v1/admin/gamification/hearts/:userId/restore
+ * POST /admin/gamification/hearts/:userId/restore
  */
 gamificationAdminRouter.post(
   "/hearts/:userId/restore",
@@ -115,7 +115,7 @@ gamificationAdminRouter.post(
 );
 
 /**
- * POST /api/v1/admin/gamification/hearts/restore-all
+ * POST /admin/gamification/hearts/restore-all
  */
 gamificationAdminRouter.post(
   "/hearts/restore-all",
@@ -137,7 +137,7 @@ gamificationAdminRouter.post(
 );
 
 /**
- * POST /api/v1/admin/gamification/hearts/sync
+ * POST /admin/gamification/hearts/sync
  * Sync all users' hearts with current gamification settings
  */
 gamificationAdminRouter.post(
@@ -156,7 +156,7 @@ gamificationAdminRouter.post(
 // ============================================================================
 
 /**
- * GET /api/v1/admin/gamification/streaks
+ * GET /admin/gamification/streaks
  */
 gamificationAdminRouter.get(
   "/streaks",
@@ -184,7 +184,7 @@ gamificationAdminRouter.get(
 );
 
 /**
- * GET /api/v1/admin/gamification/streaks/stats
+ * GET /admin/gamification/streaks/stats
  */
 gamificationAdminRouter.get(
   "/streaks/stats",
@@ -197,7 +197,7 @@ gamificationAdminRouter.get(
 );
 
 /**
- * POST /api/v1/admin/gamification/streaks/:userId/reset
+ * POST /admin/gamification/streaks/:userId/reset
  */
 gamificationAdminRouter.post(
   "/streaks/:userId/reset",
@@ -214,7 +214,7 @@ gamificationAdminRouter.post(
 );
 
 /**
- * POST /api/v1/admin/gamification/streaks/:userId/award-xp
+ * POST /admin/gamification/streaks/:userId/award-xp
  */
 gamificationAdminRouter.post(
   "/streaks/:userId/award-xp",
@@ -243,7 +243,7 @@ gamificationAdminRouter.post(
 );
 
 /**
- * POST /api/v1/admin/gamification/streaks/:userId/freeze
+ * POST /admin/gamification/streaks/:userId/freeze
  */
 gamificationAdminRouter.post(
   "/streaks/:userId/freeze",
@@ -264,7 +264,7 @@ gamificationAdminRouter.post(
 // ============================================================================
 
 /**
- * GET /api/v1/admin/gamification/characters/stats
+ * GET /admin/gamification/characters/stats
  */
 gamificationAdminRouter.get(
   "/characters/stats",
@@ -277,7 +277,7 @@ gamificationAdminRouter.get(
 );
 
 /**
- * POST /api/v1/admin/gamification/characters/:userId/:characterId/unlock
+ * POST /admin/gamification/characters/:userId/:characterId/unlock
  */
 gamificationAdminRouter.post(
   "/characters/:userId/:characterId/unlock",
@@ -301,7 +301,7 @@ gamificationAdminRouter.post(
 );
 
 /**
- * GET /api/v1/admin/gamification/users/:userId/profile
+ * GET /admin/gamification/users/:userId/profile
  */
 gamificationAdminRouter.get(
   "/users/:userId/profile",
@@ -324,7 +324,7 @@ gamificationAdminRouter.get(
 // ============================================================================
 
 /**
- * GET /api/v1/admin/gamification/config
+ * GET /admin/gamification/config
  */
 gamificationAdminRouter.get(
   "/config",
@@ -337,7 +337,7 @@ gamificationAdminRouter.get(
 );
 
 /**
- * PUT /api/v1/admin/gamification/config
+ * PUT /admin/gamification/config
  */
 gamificationAdminRouter.put(
   "/config",
@@ -383,7 +383,7 @@ gamificationAdminRouter.put(
 );
 
 /**
- * GET /api/v1/admin/gamification/events
+ * GET /admin/gamification/events
  */
 gamificationAdminRouter.get(
   "/events",
@@ -396,7 +396,7 @@ gamificationAdminRouter.get(
 );
 
 /**
- * POST /api/v1/admin/gamification/events
+ * POST /admin/gamification/events
  */
 gamificationAdminRouter.post(
   "/events",
@@ -424,7 +424,7 @@ gamificationAdminRouter.post(
 );
 
 /**
- * DELETE /api/v1/admin/gamification/events/:eventId
+ * DELETE /admin/gamification/events/:eventId
  */
 gamificationAdminRouter.delete(
   "/events/:eventId",
