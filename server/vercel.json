@@ -1,7 +1,20 @@
 {
-  "buildCommand": "cd server && yarn build",
-  "outputDirectory": "server/dist",
-  "rootDirectory": "server",
+  "buildCommand": "yarn build",
+  "outputDirectory": "dist",
+  "rootDirectory": ".",
+  "functions": {
+    "api/index.ts": {
+      "memory": 1024,
+      "maxDuration": 60,
+      "runtime": "nodejs20.x"
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/api"
+    }
+  ],
   "env": [
     "DATABASE_URL",
     "DIRECT_URL",
