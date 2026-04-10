@@ -18,7 +18,8 @@ async function main() {
 
   // ==================== ADMIN USER ====================
   const adminEmail = "admin@kamagame.com";
-  const adminPassword = "Admin@ngoth09"; // ⚠️ CHANGE THIS IN PRODUCTION! Use environment variable instead
+  // Use SEED_ADMIN_PASSWORD env var if provided, otherwise use default (CHANGE IN PRODUCTION!)
+  const adminPassword = process.env.SEED_ADMIN_PASSWORD || "Admin@ngoth09";
   const adminPasswordHash = await bcrypt.hash(adminPassword, 10);
 
   const admin = await prisma.user.upsert({
