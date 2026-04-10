@@ -189,29 +189,21 @@ async function initializeServer() {
     console.log(
       `║ • API:     http://localhost:${PORT}${" ".repeat(13 + (3000 - PORT).toString().length)}║`,
     );
-    console.log("╠════════════════════════════════════════╣");
-    console.log("║ Middleware:                            ║");
-    console.log("║ ✓ Helmet (Security)                    ║");
-    console.log("║ ✓ Compression                          ║");
-    console.log("║ ✓ CORS                                 ║");
-    console.log("║ ✓ Rate Limiting                        ║");
-    console.log("║ ✓ Request Logging                      ║");
-    console.log("║ ✓ Error Handling                       ║");
-    console.log("║ ✓ Graceful Shutdown                    ║");
-    console.log("║ ✓ Gamification System                  ║");
-    console.log("║   - Hearts Recovery                    ║");
-    console.log("║   - Streak Tracking                    ║");
-    console.log("║   - Character Progression              ║");
-    console.log("╚════════════════════════════════════════╝");
   });
 }
 
-/**
- * Start the server
- */
-initializeServer().catch((error) => {
-  console.error("Failed to initialize server:", error);
-  process.exit(1);
-});
+// Only start the server if this is running locally (not in Vercel)
+if (process.env.VERCEL !== "1") {
+  /**
+   * Start the server for local development
+   */
+  initializeServer().catch((error) => {
+    console.error("Failed to initialize server:", error);
+    process.exit(1);
+  });
+}
 
+// Export the Express app for use in:
+// 1. Vercel serverless functions (api/index.ts will wrap this)
+// 2. Other environments where the app is used as middleware
 export default app;
