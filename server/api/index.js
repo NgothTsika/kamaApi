@@ -12,11 +12,9 @@
  * - The Express app handles routing and middleware
  * - No explicit server.listen() needed (Vercel manages the server)
  */
-
-import type { VercelRequest, VercelResponse } from "@vercel/node";
 import app from "../dist/src/index.js";
-
 // Export the Express app as a Vercel serverless function handler
-export default (req: VercelRequest, res: VercelResponse) => {
-  return app(req, res);
+export default (req, res) => {
+    return app(req, res);
 };
+//# sourceMappingURL=index.js.map

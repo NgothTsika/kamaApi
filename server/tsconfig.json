@@ -3,7 +3,7 @@
     "target": "ES2020",
     "module": "esnext",
     "lib": ["ES2020"],
-    "rootDir": ".",
+    "rootDir": "./src",
     "outDir": "./dist",
     "strict": true,
     "esModuleInterop": true,
@@ -16,6 +16,6 @@
     "types": ["node"],
     "moduleResolution": "bundler"
   },
-  "include": ["src/index.ts", "src/**/*", "api/**/*", "seed.ts", "prisma/**/*"],
+  "include": ["src/**/*"],
   "exclude": ["node_modules", "dist"]
 }
