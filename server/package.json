@@ -8,7 +8,7 @@
   "license": "MIT",
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "build": "tsc --project tsconfig.json && tsc --project api/tsconfig.json",
+    "build": "tsc -p . && tsc -p api",
     "start": "node dist/src/index.js",
     "seed": "tsx prisma/seed.ts",
     "studio": "prisma studio",
