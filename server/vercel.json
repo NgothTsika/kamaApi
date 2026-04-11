@@ -12,5 +12,5 @@
       "src": "/api/(.*)",
       "dest": "server/api/index.ts"
     }
-  ],
+  ]
 }
