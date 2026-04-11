@@ -1,0 +1,19 @@
+# Ignore TypeScript source files - only deploy compiled JavaScript
+api/**/*.ts
+src/
+*.ts
+tsconfig.json
+api/tsconfig.json
+
+# Ignore development and build artifacts
+node_modules/
+.git/
+.gitignore
+.env
+.env.local
+.env.*.local
+
+# Ignore documentation and config files
+*.md
+.DS_Store
+prisma/seed.ts
