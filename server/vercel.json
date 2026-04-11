@@ -1,14 +1,14 @@
 {
-  "buildCommand": "cd server && npx prisma generate && npm run build",
+  "buildCommand": "npx prisma generate && npm run build",
   "functions": {
-    "server/dist/api/index.js": {
+    "dist/api/index.js": {
       "maxDuration": 60
     }
   },
   "routes": [
     {
       "src": "/api/(.*)",
-      "dest": "server/dist/api/index.js"
+      "dest": "dist/api/index.js"
     }
   ]
 }
