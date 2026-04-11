@@ -2,7 +2,6 @@
   "buildCommand": "prisma generate && yarn build",
   "functions": {
     "server/api/index.ts": {
-      "runtime": "@vercel/node",
       "memory": 1024,
       "maxDuration": 60
     }
