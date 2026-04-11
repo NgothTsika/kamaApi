@@ -1,5 +1,5 @@
 {
-  "buildCommand": "prisma generate && yarn build",
+  "buildCommand": "npx prisma generate && yarn build",
   "functions": {
     "server/api/index.ts": {
       "memory": 1024,
