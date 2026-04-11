@@ -1,5 +1,5 @@
 {
-  "buildCommand": "cd server && npx prisma generate && yarn build",
+  "buildCommand": "npx prisma generate && yarn build",
   "functions": {
     "dist/api/index.js": {
       "maxDuration": 60
