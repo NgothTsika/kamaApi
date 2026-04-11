@@ -1,5 +1,5 @@
 {
-  "buildCommand": "npx prisma generate && yarn build",
+  "buildCommand": "npx run generate && yarn build",
   "outputDirectory": "dist",
   "functions": {
     "dist/api/index.js": {
