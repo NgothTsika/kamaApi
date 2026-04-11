@@ -1,33 +1,29 @@
 {
-  "buildCommand": "yarn build",
-  "outputDirectory": "dist",
-  "rootDirectory": ".",
+  "buildCommand": "prisma generate && yarn build",
   "functions": {
-    "api/index.ts": {
+    "server/api/index.ts": {
+      "runtime": "@vercel/node",
       "memory": 1024,
-      "maxDuration": 60,
-      "runtime": "nodejs20.x"
+      "maxDuration": 60
     }
   },
   "routes": [
     {
-      "src": "/(.*)",
-      "dest": "/api/index.ts",
-      "methods": ["GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS"]
+      "src": "/api/(.*)",
+      "dest": "server/api/index.ts"
     }
   ],
-  "env": [
-    "DATABASE_URL",
-    "DIRECT_URL",
-    "NODE_ENV",
-    "PORT",
-    "CORS_ORIGIN",
-    "SUPABASE_URL",
-    "SUPABASE_ANON_KEY",
-    "SUPABASE_SERVICE_ROLE_KEY",
-    "JWT_SECRET",
-    "GOOGLE_CLIENT_ID",
-    "GOOGLE_CLIENT_SECRET",
-    "SESSION_TTL_DAYS"
-  ]
+  "env": {
+    "DATABASE_URL": "@database_url",
+    "DIRECT_URL": "@direct_url",
+    "NODE_ENV": "production",
+    "CORS_ORIGIN": "@cors_origin",
+    "SUPABASE_URL": "@supabase_url",
+    "SUPABASE_ANON_KEY": "@supabase_anon_key",
+    "SUPABASE_SERVICE_ROLE_KEY": "@supabase_service_role_key",
+    "JWT_SECRET": "@jwt_secret",
+    "GOOGLE_CLIENT_ID": "@google_client_id",
+    "GOOGLE_CLIENT_SECRET": "@google_client_secret",
+    "SESSION_TTL_DAYS": "7"
+  }
 }
