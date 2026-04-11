@@ -8,7 +8,7 @@
   "routes": [
     {
       "src": "/api/(.*)",
-      "dest": "/server/api/index.ts"
+      "dest": "/server/dist/index.ts"
     }
   ]
 }

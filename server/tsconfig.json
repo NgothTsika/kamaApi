@@ -1,8 +1,7 @@
 {
   "compilerOptions": {
     "target": "ES2020",
-    "module": "ESNext",
-    "moduleResolution": "NodeNext",
+    "module": "esnext",
     "lib": ["ES2020"],
     "rootDir": ".",
     "outDir": "./dist",
@@ -14,7 +13,8 @@
     "declaration": true,
     "declarationMap": true,
     "sourceMap": true,
-    "types": ["node"]
+    "types": ["node"],
+    "moduleResolution": "bundler"
   },
   "include": ["src/index.ts", "src/**/*", "api/**/*", "seed.ts", "prisma/**/*"],
   "exclude": ["node_modules", "dist"]
