@@ -1,13 +1,15 @@
 {
-  "buildCommand": "npx prisma generate && npm run build",
+  "buildCommand": "npm run generate && npm run build",
+  "outputDirectory": "dist",
   "functions": {
     "dist/api/index.js": {
-      "maxDuration": 60
+      "maxDuration": 60,
+      "memory": 1024
     }
   },
   "routes": [
     {
-      "src": "/api/(.*)",
+      "src": "/(.*)",
       "dest": "dist/api/index.js"
     }
   ]
