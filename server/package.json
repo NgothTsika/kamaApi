@@ -1,5 +1,6 @@
 {
   "name": "kamaapi",
+  "type": "module",
   "version": "1.0.0",
   "description": "learn and game african history",
   "main": "index.ts",
