@@ -1,14 +1,6 @@
 {
-  "buildCommand": "yarn build",
-  "functions": {
-    "api/index.ts": {
-      "maxDuration": 60
-    }
-  },
-  "routes": [
-    {
-      "src": "/api/(.*)",
-      "dest": "api/index.ts"
-    }
-  ]
+  "buildCommand": "yarn run build",
+  "outputDirectory": "dist",
+  "framework": "express",
+  "nodeVersion": "20.11.1"
 }
