@@ -1,5 +1,5 @@
 {
-  "buildCommand": "npm run generate && npm run build",
+  "buildCommand": "yarn generate && yarn build",
   "outputDirectory": "dist",
   "framework": "express",
   "functions": {
