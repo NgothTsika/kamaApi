@@ -1,6 +1,16 @@
 {
-  "buildCommand": "yarn run build",
+  "buildCommand": "npm run generate && npm run build",
   "outputDirectory": "dist",
   "framework": "express",
-  "nodeVersion": "20.11.1"
+  "functions": {
+    "dist/api/index.js": {
+      "maxDuration": 60
+    }
+  },
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "dist/api/index.js"
+    }
+  ]
 }
