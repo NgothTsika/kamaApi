@@ -1,16 +1,16 @@
 {
-  "buildCommand": "yarn generate && yarn build",
-  "outputDirectory": "dist",
+  "buildCommand": "cd server && yarn generate && yarn build",
+  "outputDirectory": "server/dist",
   "framework": "express",
   "functions": {
-    "dist/api/index.js": {
+    "server/dist/api/index.js": {
       "maxDuration": 60
     }
   },
   "routes": [
     {
       "src": "/(.*)",
-      "dest": "dist/api/index.js"
+      "dest": "server/dist/api/index.js"
     }
   ]
 }
