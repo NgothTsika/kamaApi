@@ -2,7 +2,7 @@ import "dotenv/config";
 import { Pool } from "pg";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@prisma/client";
-import bcrypt from "bcrypt";
+import bcrypt from "bcryptjs";
 
 const connectionString = `${process.env.DATABASE_URL ?? ""}`;
 if (!connectionString) {
@@ -808,7 +808,7 @@ async function main() {
     },
   ];
 
-  const createdLessons = [];
+  const createdLessons: Awaited<ReturnType<typeof prisma.lesson.upsert>>[] = [];
   for (const lessonData of lessonsData) {
     const createdLesson = await prisma.lesson.upsert({
       where: { slug: lessonData.slug },
@@ -839,44 +839,42 @@ async function main() {
     });
 
     if (!existingQuiz) {
-      await prisma.quiz.createMany({
-        data: [
-          {
-            lessonId: lesson.id,
-            question: `What was the main achievement of ${lesson.title}?`,
-            type: "multiple_choice",
-            options: [
-              "Cultural advancement",
-              "Military strength",
-              "Trade expansion",
-              "All of the above",
-            ],
-            correctOption: 3,
-            explanation:
-              "This civilization achieved greatness across multiple fronts.",
-            order: 0,
-            heartLimit: 4,
-            difficulty: "medium",
-            isActive: true,
-            tags: ["history", "multiple-choice"],
-            topicId: topic.id,
-          },
-          {
-            lessonId: lesson.id,
-            question: `Is ${lesson.title} still relevant today?`,
-            type: "true_false",
-            options: ["True", "False"],
-            correctOption: 0,
-            explanation:
-              "Yes, these historical lessons continue to inspire us.",
-            order: 1,
-            heartLimit: 3,
-            difficulty: "easy",
-            isActive: true,
-            tags: ["reflection", "true-false"],
-            topicId: topic.id,
-          },
-        ],
+      await prisma.quiz.create({
+        data: {
+          lessonId: lesson.id,
+          question: `What was the main achievement of ${lesson.title}?`,
+          options: [
+            "Cultural advancement",
+            "Military strength",
+            "Trade expansion",
+            "All of the above",
+          ],
+          correctOption: 3,
+          explanation:
+            "This civilization achieved greatness across multiple fronts.",
+          order: 0,
+          heartLimit: 4,
+          difficulty: "medium",
+          isActive: true,
+          tags: ["history", "multiple-choice"],
+          topicId: topic.id,
+        },
+      });
+
+      await prisma.quiz.create({
+        data: {
+          lessonId: lesson.id,
+          question: `Is ${lesson.title} still relevant today?`,
+          options: ["True", "False"],
+          correctOption: 0,
+          explanation: "Yes, these historical lessons continue to inspire us.",
+          order: 1,
+          heartLimit: 3,
+          difficulty: "easy",
+          isActive: true,
+          tags: ["reflection", "true-false"],
+          topicId: topic.id,
+        },
       });
     }
   }
@@ -998,7 +996,9 @@ async function main() {
     },
   ];
 
-  const createdAchievements = [];
+  const createdAchievements: Awaited<
+    ReturnType<typeof prisma.achievement.create>
+  >[] = [];
   for (const achieveData of achievementsData) {
     const achievement = await prisma.achievement.create({
       data: {
