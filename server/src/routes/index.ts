@@ -26,7 +26,6 @@ export const apiRouter = Router();
 
 apiRouter.use("/auth", authRouter);
 apiRouter.use("/content", contentRouter);
-apiRouter.use("/admin", contentAdminRouter);
 apiRouter.use("/progress", progressRouter);
 apiRouter.use("/game", gameRouter);
 apiRouter.use("/leaderboard", leaderboardRouter);
