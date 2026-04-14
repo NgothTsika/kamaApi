@@ -1796,6 +1796,7 @@ contentAdminRouter.get(
         id: string;
         name: string;
         description: string | null;
+        coverImage: string | null;
         createdAt: Date;
         updatedAt: Date;
         characterCount: number;
@@ -1805,6 +1806,7 @@ contentAdminRouter.get(
         cc.id,
         cc.name,
         cc.description,
+        cc."coverImage",
         cc."createdAt",
         cc."updatedAt",
         COUNT(cci.id)::int as "characterCount"
@@ -1830,6 +1832,7 @@ contentAdminRouter.get(
         id: string;
         name: string;
         description: string | null;
+        coverImage: string | null;
         createdAt: Date;
         updatedAt: Date;
         characters: Array<{
@@ -1845,6 +1848,7 @@ contentAdminRouter.get(
         cc.id,
         cc.name,
         cc.description,
+        cc."coverImage",
         cc."createdAt",
         cc."updatedAt",
         json_agg(
@@ -1879,6 +1883,7 @@ contentAdminRouter.post(
     const bodySchema = z.object({
       name: z.string().min(1).max(200),
       description: z.string().max(1000).optional().nullable(),
+      coverImage: z.string().url().optional().nullable(),
       characterIds: z.array(z.string()).default([]),
     });
     const body = bodySchema.parse(req.body);
@@ -1898,6 +1903,7 @@ contentAdminRouter.post(
       data: {
         name: body.name.trim(),
         description: body.description?.trim(),
+        coverImage: body.coverImage || undefined,
       },
     });
 
@@ -1921,6 +1927,7 @@ contentAdminRouter.post(
         changes: jsonChanges({
           name: body.name,
           description: body.description,
+          coverImage: body.coverImage || null,
           characterCount: body.characterIds.length,
         }),
       },
@@ -1940,6 +1947,7 @@ contentAdminRouter.patch(
     const bodySchema = z.object({
       name: z.string().min(1).max(200).optional(),
       description: z.string().max(1000).optional().nullable(),
+      coverImage: z.string().url().optional().nullable(),
       characterIds: z.array(z.string()).optional(),
     });
     const body = bodySchema.parse(req.body);
@@ -1969,6 +1977,10 @@ contentAdminRouter.patch(
         name: body.name?.trim(),
         description:
           body.description === undefined ? undefined : body.description?.trim(),
+        coverImage:
+          body.coverImage === undefined
+            ? undefined
+            : body.coverImage || undefined,
       },
     });
 
@@ -2000,6 +2012,8 @@ contentAdminRouter.patch(
         changes: jsonChanges({
           name: body.name,
           description: body.description,
+          coverImage:
+            body.coverImage === undefined ? undefined : body.coverImage || null,
           characterCount: body.characterIds?.length || 0,
         }),
       },
