@@ -1408,7 +1408,7 @@ contentAdminRouter.delete(
 
 // ---------- Characters ----------
 contentAdminRouter.get(
-  "/admin/characters",
+  "/characters",
   requireAuth,
   adminRoles,
   asyncHandler(async (_req, res) => {
@@ -1428,7 +1428,7 @@ contentAdminRouter.get(
 );
 
 contentAdminRouter.get(
-  "/admin/characters/:characterId",
+  "/characters/:characterId",
   requireAuth,
   adminRoles,
   asyncHandler(async (req, res) => {
@@ -1454,7 +1454,7 @@ contentAdminRouter.get(
 );
 
 contentAdminRouter.post(
-  "/admin/characters",
+  "/characters",
   requireAuth,
   adminRoles,
   asyncHandler(async (req, res) => {
@@ -1519,7 +1519,7 @@ contentAdminRouter.post(
 );
 
 contentAdminRouter.patch(
-  "/admin/characters/:characterId",
+  "/characters/:characterId",
   requireAuth,
   adminRoles,
   asyncHandler(async (req, res) => {
@@ -1610,7 +1610,7 @@ contentAdminRouter.patch(
 );
 
 contentAdminRouter.delete(
-  "/admin/characters/:characterId",
+  "/characters/:characterId",
   requireAuth,
   adminRoles,
   asyncHandler(async (req, res) => {
@@ -1635,7 +1635,7 @@ contentAdminRouter.delete(
 
 // ---------- Character translations ----------
 contentAdminRouter.get(
-  "/admin/characters/:characterId/translations",
+  "/characters/:characterId/translations",
   requireAuth,
   adminRoles,
   asyncHandler(async (req, res) => {
@@ -1652,7 +1652,7 @@ contentAdminRouter.get(
 );
 
 contentAdminRouter.post(
-  "/admin/characters/:characterId/translations",
+  "/characters/:characterId/translations",
   requireAuth,
   adminRoles,
   asyncHandler(async (req, res) => {
@@ -1778,6 +1778,273 @@ contentAdminRouter.delete(
         entityType: "character_translation",
         entityId: translationId,
         changes: {},
+      },
+    });
+
+    res.status(204).send();
+  }),
+);
+
+// ---------- Character Collections (Admin) ----------
+contentAdminRouter.get(
+  "/character-collections",
+  requireAuth,
+  adminRoles,
+  asyncHandler(async (_req, res) => {
+    const collections = await prisma.$queryRaw<
+      Array<{
+        id: string;
+        name: string;
+        description: string | null;
+        createdAt: Date;
+        updatedAt: Date;
+        characterCount: number;
+      }>
+    >`
+      SELECT 
+        cc.id,
+        cc.name,
+        cc.description,
+        cc."createdAt",
+        cc."updatedAt",
+        COUNT(cci.id)::int as "characterCount"
+      FROM "CharacterCollection" cc
+      LEFT JOIN "CharacterCollectionItem" cci ON cc.id = cci."collectionId"
+      GROUP BY cc.id
+      ORDER BY cc."createdAt" DESC
+    `;
+    res.status(200).json({ collections });
+  }),
+);
+
+contentAdminRouter.get(
+  "/character-collections/:collectionId",
+  requireAuth,
+  adminRoles,
+  asyncHandler(async (req, res) => {
+    const paramsSchema = z.object({ collectionId: z.string().min(1) });
+    const { collectionId } = paramsSchema.parse(req.params);
+
+    const collection = await prisma.$queryRaw<
+      Array<{
+        id: string;
+        name: string;
+        description: string | null;
+        createdAt: Date;
+        updatedAt: Date;
+        characters: Array<{
+          id: string;
+          name: string;
+          slug: string;
+          imageUrl: string | null;
+          rarityLevel: string | null;
+        }> | null;
+      }>
+    >`
+      SELECT 
+        cc.id,
+        cc.name,
+        cc.description,
+        cc."createdAt",
+        cc."updatedAt",
+        json_agg(
+          json_build_object(
+            'id', c.id,
+            'name', c.name,
+            'slug', c.slug,
+            'imageUrl', c."imageUrl",
+            'rarityLevel', c."rarityLevel"
+          ) ORDER BY cci."order"
+        ) FILTER (WHERE c.id IS NOT NULL) as characters
+      FROM "CharacterCollection" cc
+      LEFT JOIN "CharacterCollectionItem" cci ON cc.id = cci."collectionId"
+      LEFT JOIN "Character" c ON cci."characterId" = c.id
+      WHERE cc.id = ${collectionId}
+      GROUP BY cc.id
+    `;
+
+    if (!collection || collection.length === 0) {
+      throw new HttpError(404, "Collection not found");
+    }
+
+    res.status(200).json({ collection: collection[0] });
+  }),
+);
+
+contentAdminRouter.post(
+  "/character-collections",
+  requireAuth,
+  adminRoles,
+  asyncHandler(async (req, res) => {
+    const bodySchema = z.object({
+      name: z.string().min(1).max(200),
+      description: z.string().max(1000).optional().nullable(),
+      characterIds: z.array(z.string()).default([]),
+    });
+    const body = bodySchema.parse(req.body);
+
+    // Verify all character IDs exist
+    if (body.characterIds.length > 0) {
+      const existingCharacters = await prisma.character.findMany({
+        where: { id: { in: body.characterIds } },
+        select: { id: true },
+      });
+      if (existingCharacters.length !== body.characterIds.length) {
+        throw new HttpError(400, "Some character IDs do not exist");
+      }
+    }
+
+    const collection = await prisma.characterCollection.create({
+      data: {
+        name: body.name.trim(),
+        description: body.description?.trim(),
+      },
+    });
+
+    // Add characters to collection if provided
+    if (body.characterIds.length > 0) {
+      await prisma.characterCollectionItem.createMany({
+        data: body.characterIds.map((characterId, index) => ({
+          collectionId: collection.id,
+          characterId,
+          order: index,
+        })),
+      });
+    }
+
+    await prisma.auditLog.create({
+      data: {
+        adminId: req.user!.id,
+        action: "create_character_collection",
+        entityType: "character_collection",
+        entityId: collection.id,
+        changes: jsonChanges({
+          name: body.name,
+          description: body.description,
+          characterCount: body.characterIds.length,
+        }),
+      },
+    });
+
+    res.status(201).json({ collection });
+  }),
+);
+
+contentAdminRouter.patch(
+  "/character-collections/:collectionId",
+  requireAuth,
+  adminRoles,
+  asyncHandler(async (req, res) => {
+    const paramsSchema = z.object({ collectionId: z.string().min(1) });
+    const { collectionId } = paramsSchema.parse(req.params);
+    const bodySchema = z.object({
+      name: z.string().min(1).max(200).optional(),
+      description: z.string().max(1000).optional().nullable(),
+      characterIds: z.array(z.string()).optional(),
+    });
+    const body = bodySchema.parse(req.body);
+
+    // Verify collection exists
+    const existing = await prisma.characterCollection.findUnique({
+      where: { id: collectionId },
+    });
+    if (!existing) {
+      throw new HttpError(404, "Collection not found");
+    }
+
+    // Verify all character IDs exist if provided
+    if (body.characterIds && body.characterIds.length > 0) {
+      const existingCharacters = await prisma.character.findMany({
+        where: { id: { in: body.characterIds } },
+        select: { id: true },
+      });
+      if (existingCharacters.length !== body.characterIds.length) {
+        throw new HttpError(400, "Some character IDs do not exist");
+      }
+    }
+
+    const collection = await prisma.characterCollection.update({
+      where: { id: collectionId },
+      data: {
+        name: body.name?.trim(),
+        description:
+          body.description === undefined ? undefined : body.description?.trim(),
+      },
+    });
+
+    // Update characters if provided
+    if (body.characterIds !== undefined) {
+      // Remove existing items
+      await prisma.characterCollectionItem.deleteMany({
+        where: { collectionId },
+      });
+
+      // Add new items
+      if (body.characterIds.length > 0) {
+        await prisma.characterCollectionItem.createMany({
+          data: body.characterIds.map((characterId, index) => ({
+            collectionId,
+            characterId,
+            order: index,
+          })),
+        });
+      }
+    }
+
+    await prisma.auditLog.create({
+      data: {
+        adminId: req.user!.id,
+        action: "update_character_collection",
+        entityType: "character_collection",
+        entityId: collectionId,
+        changes: jsonChanges({
+          name: body.name,
+          description: body.description,
+          characterCount: body.characterIds?.length || 0,
+        }),
+      },
+    });
+
+    res.status(200).json({ collection });
+  }),
+);
+
+contentAdminRouter.delete(
+  "/character-collections/:collectionId",
+  requireAuth,
+  adminRoles,
+  asyncHandler(async (req, res) => {
+    const paramsSchema = z.object({ collectionId: z.string().min(1) });
+    const { collectionId } = paramsSchema.parse(req.params);
+
+    // Verify collection exists
+    const existing = await prisma.characterCollection.findUnique({
+      where: { id: collectionId },
+    });
+    if (!existing) {
+      throw new HttpError(404, "Collection not found");
+    }
+
+    // Delete all collection items first (cascade)
+    await prisma.characterCollectionItem.deleteMany({
+      where: { collectionId },
+    });
+
+    // Delete the collection
+    await prisma.characterCollection.delete({
+      where: { id: collectionId },
+    });
+
+    await prisma.auditLog.create({
+      data: {
+        adminId: req.user!.id,
+        action: "delete_character_collection",
+        entityType: "character_collection",
+        entityId: collectionId,
+        changes: jsonChanges({
+          name: existing.name,
+          description: existing.description,
+        }),
       },
     });
 
